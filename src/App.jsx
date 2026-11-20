@@ -1,0 +1,126 @@
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import PillTextBanner from './components/PillTextBanner';
+import StatsHighlight from './components/StatsHighlight';
+import DestinationBento from './components/DestinationBento';
+import PackagesSection from './components/PackagesSection';
+import PackageModal from './components/PackageModal';
+import CustomTripPlanner from './components/CustomTripPlanner';
+import FeaturesSection from './components/FeaturesSection';
+import VehicleFleetSection from './components/VehicleFleetSection';
+import WeatherAdvisory from './components/WeatherAdvisory';
+import TestimonialsSection from './components/TestimonialsSection';
+import FAQSection from './components/FAQSection';
+import BookingModal from './components/BookingModal';
+import Footer from './components/Footer';
+import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
+
+export default function App() {
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [bookingModalData, setBookingModalData] = useState(null);
+
+  const handleOpenBooking = (data = {}) => {
+    setBookingModalData(data);
+    setBookingModalOpen(true);
+  };
+
+  const handleCloseBooking = () => {
+    setBookingModalOpen(false);
+    setBookingModalData(null);
+  };
+
+  const handleSelectDestination = (dest) => {
+    handleOpenBooking({
+      destination: `${dest.name}, ${dest.state}`,
+      price: dest.priceFrom
+    });
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#FAFAF8] text-slate-900 selection:bg-slate-900 selection:text-white font-sans antialiased">
+      {/* Top Navbar */}
+      <Navbar
+        onOpenBooking={handleOpenBooking}
+        onSelectDestination={handleSelectDestination}
+      />
+
+      <main className="flex-1">
+        {/* 1. Hero Section matching reference image */}
+        <Hero
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 2. Creative Typography with Embedded Pill Images */}
+        <PillTextBanner />
+
+        {/* 3. Stats & About Highlight matching reference image */}
+        <StatsHighlight
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 4. Experience Our Destination Bento Grid matching reference image */}
+        <DestinationBento
+          onSelectDestination={handleSelectDestination}
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 5. Curated Tour Packages Section */}
+        <PackagesSection
+          onSelectPackage={setSelectedPackage}
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 6. Custom Itinerary Planner & Real-Time Price Estimator */}
+        <CustomTripPlanner
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 7. Key Features / Value Pillars from reference image */}
+        <FeaturesSection />
+
+        {/* 8. Dedicated Vehicle Fleet (Innova Crysta, Tempo, Thar, Dzire) */}
+        <VehicleFleetSection
+          onOpenBooking={handleOpenBooking}
+        />
+
+        {/* 9. Live Road & Weather Status Advisory */}
+        <WeatherAdvisory />
+
+        {/* 10. Traveler Testimonials */}
+        <TestimonialsSection />
+
+        {/* 11. Frequently Asked Questions */}
+        <FAQSection
+          onOpenBooking={handleOpenBooking}
+        />
+      </main>
+
+      {/* Footer */}
+      <Footer
+        onOpenBooking={handleOpenBooking}
+      />
+
+      {/* Package Day-by-Day Itinerary Modal */}
+      {selectedPackage && (
+        <PackageModal
+          pkg={selectedPackage}
+          onClose={() => setSelectedPackage(null)}
+          onOpenBooking={handleOpenBooking}
+        />
+      )}
+
+      {/* Universal Booking / Reservation Modal */}
+      {bookingModalOpen && (
+        <BookingModal
+          initialData={bookingModalData}
+          onClose={handleCloseBooking}
+        />
+      )}
+
+      {/* Floating WhatsApp Concierge Button */}
+      <WhatsAppFloatingButton />
+    </div>
+  );
+}
