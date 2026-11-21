@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import PillTextBanner from './components/PillTextBanner';
@@ -13,13 +13,53 @@ import WeatherAdvisory from './components/WeatherAdvisory';
 import TestimonialsSection from './components/TestimonialsSection';
 import FAQSection from './components/FAQSection';
 import BookingModal from './components/BookingModal';
+import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
+import { supabase, signOutUser } from './lib/supabaseClient';
 
 export default function App() {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingModalData, setBookingModalData] = useState(null);
+  
+  // Auth state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState('signup');
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Check initial active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+      }
+    });
+
+    // Listen to session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+      } else {
+        // If not session user and not manually set demo user, reset
+        if (!currentUser?.name) {
+          setCurrentUser(null);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleOpenAuth = (mode = 'signup') => {
+    setAuthInitialMode(mode);
+    setAuthModalOpen(true);
+  };
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    setCurrentUser(null);
+  };
 
   const handleOpenBooking = (data = {}) => {
     setBookingModalData(data);
@@ -40,10 +80,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAF8] text-slate-900 selection:bg-slate-900 selection:text-white font-sans antialiased">
-      {/* Top Navbar */}
+      {/* Top Navbar with Auth Props */}
       <Navbar
         onOpenBooking={handleOpenBooking}
         onSelectDestination={handleSelectDestination}
+        onOpenAuth={handleOpenAuth}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
 
       <main className="flex-1">
@@ -118,6 +161,17 @@ export default function App() {
           onClose={handleCloseBooking}
         />
       )}
+
+      {/* Sign In & Sign Up Auth Modal (Matching Reference Image) */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authInitialMode}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+          setAuthModalOpen(false);
+        }}
+      />
 
       {/* Floating WhatsApp Concierge Button */}
       <WhatsAppFloatingButton />

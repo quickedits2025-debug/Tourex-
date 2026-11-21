@@ -6,6 +6,80 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
+ * Sign In with Email & Password
+ */
+export async function signInUser(email, password) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, user: data.user, session: data.session };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Sign Up with Email & Password
+ */
+export async function signUpUser(email, password, metadata = {}) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata,
+      },
+    });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, user: data.user, session: data.session };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Sign In with Google OAuth
+ */
+export async function signInWithGoogle() {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Sign Out Current User
+ */
+export async function signOutUser() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Save a complete tour / cab / package booking reservation
  */
 export async function createBooking(bookingPayload) {

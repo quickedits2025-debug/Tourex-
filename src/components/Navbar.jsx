@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Compass, Phone, MessageSquare, Menu, X, ArrowRight, MapPin, User, LogIn } from 'lucide-react';
 
-export default function Navbar({ onOpenBooking, onSelectDestination }) {
+export default function Navbar({ onOpenBooking, onSelectDestination, onOpenAuth, currentUser, onSignOut }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -90,13 +91,56 @@ export default function Navbar({ onOpenBooking, onSelectDestination }) {
 
             {/* Right Action Buttons */}
             <div className="hidden sm:flex items-center gap-3">
-              <button
-                onClick={() => onOpenBooking({ destination: 'Manali, Himachal' })}
-                className="text-xs md:text-sm font-bold px-5 py-2.5 rounded-full border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white transition-all duration-200 flex items-center gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5 text-slate-700 hover:text-white" />
-                <span>Sign In</span>
-              </button>
+              {currentUser ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-slate-950 text-emerald-400 font-bold text-xs flex items-center justify-center">
+                      {(currentUser.user_metadata?.full_name || currentUser.name || currentUser.email || 'U')[0].toUpperCase()}
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 max-w-[100px] truncate">
+                      {currentUser.user_metadata?.full_name || currentUser.name || currentUser.email?.split('@')[0]}
+                    </span>
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-fadeIn space-y-1">
+                      <div className="px-3 py-2 border-b border-gray-100">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold">Signed in as</p>
+                        <p className="text-xs font-semibold text-slate-800 truncate">{currentUser.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onOpenBooking({ destination: 'My Saved Tours' });
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-700 rounded-xl transition-colors"
+                      >
+                        My Bookings & Vouchers
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onSignOut();
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => onOpenAuth('signin')}
+                  className="text-xs md:text-sm font-bold px-5 py-2.5 rounded-full border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white transition-all duration-200 flex items-center gap-1.5 shadow-sm"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-slate-700 hover:text-white" />
+                  <span>Sign In</span>
+                </button>
+              )}
 
               <button
                 onClick={() => onOpenBooking()}
@@ -137,6 +181,40 @@ export default function Navbar({ onOpenBooking, onSelectDestination }) {
               ))}
             </nav>
             <div className="pt-2 flex flex-col gap-2">
+              {currentUser ? (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-950 text-emerald-400 font-bold text-xs flex items-center justify-center">
+                      {(currentUser.user_metadata?.full_name || currentUser.name || currentUser.email || 'U')[0].toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-slate-900">{currentUser.user_metadata?.full_name || currentUser.name || 'Traveler'}</p>
+                      <p className="text-[10px] text-slate-500 truncate max-w-[160px]">{currentUser.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onSignOut();
+                    }}
+                    className="text-xs font-bold text-rose-600 px-3 py-1 bg-white border border-rose-200 rounded-lg"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenAuth('signin');
+                  }}
+                  className="w-full text-center py-2.5 border-2 border-slate-900 text-slate-900 font-bold rounded-xl hover:bg-slate-900 hover:text-white transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In / Create Account</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
