@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { createBooking } from '../lib/supabaseClient';
 import PaymentGateway from './PaymentGateway';
+import BillReceiptModal from './BillReceiptModal';
 
 export default function BookingModal({ initialData, onClose }) {
   // Step 1: Traveler Details -> Step 2: Payment Gateway Checkout -> Step 3: Confirmed Voucher & Payment Receipt
@@ -13,6 +14,7 @@ export default function BookingModal({ initialData, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [paymentResult, setPaymentResult] = useState(null);
+  const [showBillModal, setShowBillModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -451,13 +453,11 @@ export default function BookingModal({ initialData, onClose }) {
                 </a>
 
                 <button
-                  onClick={() => {
-                    window.print();
-                  }}
-                  className="w-full py-3 px-6 rounded-full border border-gray-300 hover:border-slate-900 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                  onClick={() => setShowBillModal(true)}
+                  className="w-full py-3.5 px-6 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download / Print Receipt</span>
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>Download / Print Official Tax Invoice & Receipt</span>
                 </button>
               </div>
 
@@ -467,6 +467,31 @@ export default function BookingModal({ initialData, onClose }) {
         </div>
 
       </div>
+
+      {/* Official Tax Invoice & Bill Receipt Modal */}
+      <BillReceiptModal
+        isOpen={showBillModal}
+        onClose={() => setShowBillModal(false)}
+        bookingData={{
+          bookingId,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          destination: formData.destination,
+          serviceType: formData.serviceType,
+          checkIn: formData.checkIn,
+          checkOut: formData.checkOut,
+          guests: formData.guests,
+          pickupCity: formData.pickupCity,
+          basePrice,
+          subtotal,
+          discountAmount,
+          totalPayable,
+          tokenAdvance,
+          couponCode: formData.couponCode,
+        }}
+        paymentInfo={paymentResult}
+      />
     </div>
   );
 }
