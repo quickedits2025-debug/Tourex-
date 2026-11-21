@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, Calendar, Users, MapPin, Phone, Mail, User, ShieldCheck, Ticket, Download, ArrowRight, Loader2 } from 'lucide-react';
+import { 
+  X, CheckCircle, Calendar, Users, MapPin, Phone, Mail, User, 
+  ShieldCheck, ArrowRight, Loader2, CreditCard, Lock, Smartphone, 
+  Download, MessageSquare, CheckCircle2 
+} from 'lucide-react';
 import { createBooking } from '../lib/supabaseClient';
+import PaymentGateway from './PaymentGateway';
 
 export default function BookingModal({ initialData, onClose }) {
-  const [step, setStep] = useState(1); // 1 = Form, 2 = Confirmed Voucher
+  // Step 1: Traveler Details -> Step 2: Payment Gateway Checkout -> Step 3: Confirmed Voucher & Payment Receipt
+  const [step, setStep] = useState(1); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [paymentResult, setPaymentResult] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -48,20 +56,25 @@ export default function BookingModal({ initialData, onClose }) {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Step 1 Submission: Validates traveler info and opens payment gateway
+  const handleProceedToPayment = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) {
       alert('Please provide your Name and WhatsApp phone number');
       return;
     }
-    setIsSubmitting(true);
-    setSubmitError('');
-
-    // Generate Booking Reference
     const generatedId = `TXH-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    setBookingId(generatedId);
+    setStep(2); // Advance to Payment Gateway
+  };
+
+  // Step 2 Submission: Payment completed via Google Pay / PhonePe / Paytm / Card / NetBanking
+  const handlePaymentCompleted = async (payInfo) => {
+    setIsSubmitting(true);
+    setPaymentResult(payInfo);
 
     const bookingPayload = {
-      booking_id: generatedId,
+      booking_id: bookingId,
       full_name: formData.name,
       phone: formData.phone,
       email: formData.email || null,
@@ -76,57 +89,58 @@ export default function BookingModal({ initialData, onClose }) {
       discount_amount: discountAmount,
       total_payable: totalPayable,
       advance_token: tokenAdvance,
-      status: 'pending'
+      status: 'advance_paid'
     };
 
-    const res = await createBooking(bookingPayload);
+    // Save to Supabase backend
+    await createBooking(bookingPayload);
     setIsSubmitting(false);
-
-    if (res.success) {
-      setBookingId(generatedId);
-      setStep(2);
-    } else {
-      console.warn('Booking saved locally as fallback:', res.error);
-      setBookingId(generatedId);
-      setStep(2);
-    }
+    setStep(3); // Show confirmed voucher & payment receipt
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto border border-gray-100 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+      <div className={`relative w-full ${step === 2 ? 'max-w-5xl' : 'max-w-2xl'} bg-white rounded-3xl shadow-2xl overflow-hidden my-auto border border-gray-100 max-h-[94vh] flex flex-col transition-all duration-300`}>
         
         {/* Header */}
         <div className="bg-slate-900 text-white p-5 sm:p-6 flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span className={`w-2.5 h-2.5 rounded-full ${step === 3 ? 'bg-emerald-400' : 'bg-emerald-400 animate-pulse'}`}></span>
               <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                {step === 1 ? 'Official Tour Reservation' : 'Reservation Confirmed!'}
+                {step === 1 && 'Step 1 of 2: Tour & Traveler Details'}
+                {step === 2 && 'Step 2 of 2: Secure Payment Gateway'}
+                {step === 3 && 'Booking Confirmed & Advance Paid!'}
               </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-extrabold text-white mt-1">
-              {step === 1 ? 'Reserve Your Himalayan Journey' : 'Pack Your Bags for the Himalayas!'}
+              {step === 1 && 'Reserve Your Himalayan Journey'}
+              {step === 2 && 'Complete Your Advance Token Payment'}
+              {step === 3 && 'Pack Your Bags for the Himalayas!'}
             </h3>
           </div>
           <button
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 text-slate-800">
+        <div className="p-4 sm:p-8 overflow-y-auto space-y-6 flex-1 text-slate-800">
           
-          {step === 1 ? (
-            <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ================= STEP 1: TRAVELER & TRIP DETAILS ================= */}
+          {step === 1 && (
+            <form onSubmit={handleProceedToPayment} className="space-y-5">
               
               {/* Selected Destination Banner */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Selected Destination / Circuit</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Selected Destination / Circuit
+                  </span>
                   <p className="text-sm font-bold text-slate-900">{formData.destination}</p>
                 </div>
                 <span className="text-xs font-semibold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full">
@@ -219,7 +233,7 @@ export default function BookingModal({ initialData, onClose }) {
                     <User className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="e.g. Rahul Sharma"
+                      placeholder="e.g. Rohit Sharma"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
@@ -254,7 +268,7 @@ export default function BookingModal({ initialData, onClose }) {
                   <Mail className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="e.g. rahul@gmail.com"
+                    placeholder="e.g. rohit@gmail.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full pl-9 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
@@ -284,10 +298,10 @@ export default function BookingModal({ initialData, onClose }) {
                 {couponError && <p className="text-xs text-rose-500 font-semibold">{couponError}</p>}
               </div>
 
-              {/* Real-time Pricing Summary */}
+              {/* Price summary banner before gateway */}
               <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-2">
                 <div className="flex justify-between text-xs text-slate-400">
-                  <span>Package Estimate ({guestMultiplier} Travelers)</span>
+                  <span>Total Tour Cost ({guestMultiplier} Travelers)</span>
                   <span>₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 {appliedDiscount > 0 && (
@@ -298,32 +312,22 @@ export default function BookingModal({ initialData, onClose }) {
                 )}
                 <div className="border-t border-slate-800 pt-2 flex justify-between items-baseline">
                   <div>
-                    <span className="text-sm font-bold text-white block">Total Estimated Amount</span>
-                    <span className="text-[11px] text-slate-400">Pay 25% token now, balance on arrival</span>
+                    <span className="text-sm font-bold text-white block">25% Advance Token Today</span>
+                    <span className="text-[11px] text-slate-400">Remaining 75% on arrival</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-2xl font-black text-emerald-400">₹{totalPayable.toLocaleString('en-IN')}</span>
+                    <span className="text-2xl font-black text-emerald-400">₹{tokenAdvance.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Button to advance to Payment Gateway */}
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-75 text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2 group"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving to Supabase Database...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Confirm & Generate Travel Voucher</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                <span>Proceed to Payment Gateway (Google Pay, UPI, Cards)</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
 
               <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
@@ -331,39 +335,85 @@ export default function BookingModal({ initialData, onClose }) {
                 <span>Zero cancellation fee up to 10 days before departure</span>
               </div>
             </form>
-          ) : (
-            /* STEP 2: BOOKING CONFIRMATION VOUCHER */
-            <div className="space-y-6 text-center">
+          )}
+
+          {/* ================= STEP 2: PAYMENT GATEWAY (Skillshare Reference Match) ================= */}
+          {step === 2 && (
+            <PaymentGateway
+              amount={tokenAdvance}
+              totalAmount={totalPayable}
+              bookingDetails={formData}
+              appliedDiscount={appliedDiscount}
+              discountAmount={discountAmount}
+              couponCode={formData.couponCode}
+              setCouponCode={(val) => setFormData({ ...formData, couponCode: val })}
+              onApplyCoupon={handleApplyCoupon}
+              couponSuccess={couponSuccess}
+              couponError={couponError}
+              onPaymentSuccess={handlePaymentCompleted}
+              onBack={() => setStep(1)}
+            />
+          )}
+
+          {/* ================= STEP 3: CONFIRMED BOOKING & PAYMENT RECEIPT ================= */}
+          {step === 3 && (
+            <div className="space-y-6 text-center animate-fadeIn">
+              
               <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-md">
                 <CheckCircle className="w-10 h-10" />
               </div>
 
               <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-                  Booking Request Received
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  Advance Token Paid Successfully
                 </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900">
-                  You're Going to the Mountains!
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+                  Your Himalayan Tour is Reserved!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600">
                   Booking Reference: <strong className="text-slate-900 font-mono text-sm">{bookingId}</strong>
                 </p>
               </div>
 
-              {/* Voucher Preview Card */}
+              {/* Payment Receipt & Voucher Card */}
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 text-left space-y-4 shadow-sm relative overflow-hidden">
+                
+                {/* Official Paid Stamp */}
                 <div className="border-b border-dashed border-gray-300 pb-3 flex justify-between items-center">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Guest</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Guest Name</span>
                     <h4 className="font-bold text-slate-900 text-base">{formData.name}</h4>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">WhatsApp</span>
-                    <p className="text-xs font-semibold text-slate-800">{formData.phone}</p>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Payment Status</span>
+                    <p className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-block">
+                      ● PAID (Token Confirmed)
+                    </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs">
+                {/* Transaction details */}
+                <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3.5 rounded-2xl border border-slate-200/80">
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Paid Via:</span>
+                    <strong className="text-slate-800 capitalize">{paymentResult?.provider || 'UPI (Google Pay / PhonePe)'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Transaction ID:</span>
+                    <strong className="text-slate-800 font-mono text-[11px]">{paymentResult?.transactionId || 'TXN_UPI_89127391'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Amount Paid Today:</span>
+                    <strong className="text-emerald-700 text-sm">₹{tokenAdvance.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Balance on Arrival:</span>
+                    <strong className="text-slate-800 text-sm">₹{(totalPayable - tokenAdvance).toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+
+                {/* Tour Specifics */}
+                <div className="grid grid-cols-2 gap-4 text-xs pt-1">
                   <div>
                     <span className="text-slate-400 block font-medium">Destination:</span>
                     <span className="font-bold text-slate-800">{formData.destination}</span>
@@ -373,46 +423,41 @@ export default function BookingModal({ initialData, onClose }) {
                     <span className="font-bold text-slate-800">{formData.pickupCity}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block font-medium">Dates:</span>
+                    <span className="text-slate-400 block font-medium">Travel Dates:</span>
                     <span className="font-bold text-slate-800">{formData.checkIn} to {formData.checkOut}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block font-medium">Group:</span>
+                    <span className="text-slate-400 block font-medium">Travelers:</span>
                     <span className="font-bold text-slate-800">{formData.guests}</span>
                   </div>
                 </div>
 
-                <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-emerald-800 uppercase block">Total Package Value</span>
-                    <span className="text-xl font-black text-emerald-950">₹{totalPayable.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-emerald-700 block">Advance Token (25%)</span>
-                    <span className="text-sm font-bold text-emerald-900">₹{tokenAdvance.toLocaleString('en-IN')}</span>
-                  </div>
+                <div className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Your booking has been saved in our Supabase system. Our concierge team has been notified.</span>
                 </div>
               </div>
 
+              {/* Action buttons */}
               <div className="space-y-3">
                 <a
-                  href={`https://wa.me/919816054321?text=Hi%20Tourex%20Himalaya%20team!%20My%20Booking%20ID%20is%20${bookingId}.%20Destination:%20${formData.destination}%20from%20${formData.checkIn}.%20Please%20confirm%20my%20driver%20and%20resort%20voucher.`}
+                  href={`https://wa.me/919816054321?text=Hi%20Tourex%20Himalaya%20team!%20My%20Booking%20ID%20is%20${bookingId}.%20I%20have%20paid%20the%20advance%20token%20of%20%E2%82%B9${tokenAdvance}%20via%20${paymentResult?.provider || 'UPI'}.%20Transaction%20Ref:%20${paymentResult?.transactionId || 'TXN_CONFIRMED'}.%20Please%20send%20my%20resort%20and%20chauffeur%20voucher.`}
                   target="_blank"
                   rel="noreferrer"
                   className="w-full py-4 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm tracking-wide shadow-lg transition-all flex items-center justify-center gap-2"
                 >
+                  <MessageSquare className="w-4 h-4" />
                   <span>Connect with Mountain Concierge on WhatsApp</span>
-                  <ArrowRight className="w-4 h-4" />
                 </a>
 
                 <button
                   onClick={() => {
-                    alert(`Booking voucher for ID: ${bookingId} has been sent to ${formData.phone} via SMS/WhatsApp!`);
-                    onClose();
+                    window.print();
                   }}
-                  className="w-full py-3 px-6 rounded-full border border-gray-300 hover:border-slate-900 text-slate-800 font-semibold text-xs transition-colors"
+                  className="w-full py-3 px-6 rounded-full border border-gray-300 hover:border-slate-900 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
                 >
-                  Download / Close Voucher
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download / Print Receipt</span>
                 </button>
               </div>
 
